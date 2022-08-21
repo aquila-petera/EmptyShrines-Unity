@@ -1,0 +1,391 @@
+using System;
+using System.Collections;
+using TMPro;
+using UnityEngine;
+
+public class CharacterMovement : PhysicsEntity
+{
+    [SerializeField]
+    private float moveSpeed = 1f;
+    [SerializeField]
+    private float jumpSpeed = 2f;
+    [SerializeField]
+    private float airJumpSpeed = 1.5f;
+    [SerializeField]
+    private float attackRange = 0.4f;
+    [SerializeField]
+    private float invulnTime = 1.2f;
+    [SerializeField]
+    private TMP_Text channelText;
+    [SerializeField]
+    private int maxHp = 3;
+
+    [SerializeField]
+    private AudioClip staffSwingSound;
+    [SerializeField]
+    private AudioClip staffHitSound;
+
+    private Animator animator;
+    private bool inControl = true;
+    private bool attacking = false;
+    private bool channeling = false;
+    private bool focusing = false;
+    private bool invuln = false;
+    private string channelString = "";
+    private SpriteFlipper spriteFlipper;
+    private IInteractable interactable;
+    private int hitPoints;
+    private AudioSource audioSource;
+    private float footstepTimer;
+    private float footstepInterval = 0.25f;
+    private bool hasAirJump = true;
+
+    public bool HasControl()
+    {
+        return inControl;
+    }
+
+    public void SetControlEnabled(bool enabled)
+    {
+        inControl = enabled;
+    }
+
+    public void AutoMove(bool left, float duration = 0)
+    {
+        inControl = false;
+        ToggleChannel(false);
+        ToggleFocus(false);
+        xspd = left ? -moveSpeed : moveSpeed;
+        animator.SetInteger("MoveSpeed", (int)xspd);
+        if (duration > 0)
+            TimingManager.ExecuteAfterDelay(duration, RestoreControl);
+    }
+
+    public void AutoChannel(float duration)
+    {
+        xspd = 0;
+        inControl = false;
+        ToggleChannel(false);
+        ToggleFocus(false);
+        animator.SetBool("Channeling", true);
+        inControl = false;
+        TimingManager.ExecuteAfterDelay(duration, RestoreControl);
+    }
+
+    public void SetInteractable(IInteractable obj)
+    {
+        interactable = obj;
+    }
+
+    public void TakeDamage()
+    {
+        if (!invuln)
+        {
+            invuln = true;
+            attacking = false;
+            ToggleChannel(false);
+            ToggleFocus(false);
+            hitPoints--;
+            EventManager.InvokeEvent(new PlayerHealthChangeEvent(1));
+            if (hitPoints <= 0)
+            {
+                Faint();
+            }
+            else
+            {
+                animator.SetTrigger("Hurt");
+                StartCoroutine(DoHurtSequence());
+            }
+        }
+    }
+
+    public void FullHeal()
+    {
+        int amt = maxHp - hitPoints;
+        hitPoints = maxHp;
+        EventManager.InvokeEvent(new PlayerHealthChangeEvent(-amt));
+    }
+
+    public void SetHitPoints(int hp)
+    {
+        hitPoints = hp;
+    }
+
+    public int GetHitPoints()
+    {
+        return hitPoints;
+    }
+
+    public int GetMaxHitPoints()
+    {
+        return maxHp;
+    }
+
+    private void Faint()
+    {
+        animator.SetTrigger("Faint");
+        CameraManager.UnlockCamera();
+        inControl = false;
+        xspd = 0;
+        spriteFlipper.Spin(false);
+        TimingManager.ExecuteAfterDelay(1, EntityManager.RespawnPlayer);
+    }
+
+    private void RestoreControl()
+    {
+        inControl = true;
+        ToggleChannel(false);
+        ToggleFocus(false);
+        xspd = 0;
+        animator.SetInteger("MoveSpeed", 0);
+    }
+
+    new private void Start()
+    {
+        base.Start();
+        animator = GetComponent<Animator>();
+        spriteFlipper = GetComponent<SpriteFlipper>();
+        audioSource = GetComponent<AudioSource>();
+        hitPoints = maxHp;
+        groundSnapFlag = true;
+
+        EntityManager.RegisterPlayer(gameObject);
+        EventManager.BindEvent(typeof(ObjectHitEvent), new Action<BasicEvent>(OnHitObject));
+    }
+
+    private void OnDestroy()
+    {
+        EventManager.UnbindEvent(typeof(ObjectHitEvent), OnHitObject);
+    }
+
+    private void Update()
+    {
+        if (inControl && !channeling && !focusing && !attacking)
+        {
+            if (Input.GetKey(KeyCode.S))
+            {
+                spriteFlipper.Flip(true);
+                xspd = -moveSpeed;
+                animator.SetInteger("MoveSpeed", 1);
+                if (grounded && footstepTimer <= 0)
+                {
+                    SFXManager.PlaySound(audioSource, GetFootstepSound(), true, 1, RNGManager.RandomRange(0.9f, 1.1f));
+                    footstepTimer = footstepInterval;
+                }
+            }
+            else if (Input.GetKey(KeyCode.F))
+            {
+                spriteFlipper.Flip(false);
+                xspd = moveSpeed;
+                animator.SetInteger("MoveSpeed", -1);
+                if (grounded && footstepTimer <= 0)
+                {
+                    SFXManager.PlaySound(audioSource, GetFootstepSound(), true, 1, RNGManager.RandomRange(0.9f, 1.1f));
+                    footstepTimer = footstepInterval;
+                }
+            }
+            else
+            {
+                xspd = 0;
+                animator.SetInteger("MoveSpeed", 0);
+            }
+            if (grounded && Input.GetKeyDown(KeyCode.E))
+            {
+                interactable?.OnInteract();
+            }
+            if (Input.GetKeyDown(KeyCode.J))
+            {
+                animator.SetTrigger("Attack");
+            }
+            if (Input.GetKeyDown(KeyCode.D))
+            {
+                if (grounded)
+                {
+                    yspd = jumpSpeed;
+                }
+                else if (hasAirJump && AbilityManager.HasAbility(AbilityManager.Abilities.ABILITY_DOUBLE_JUMP))
+                {
+                    yspd = airJumpSpeed;
+                    hasAirJump = false;
+                    ParticleManager.PlayParticleSystemAtPosition("Sakura", transform.position + Vector3.down * 0.2f, new Color(1, 0.55f, 0.95f));
+                }
+            }
+        }
+        else if (channeling)
+        {
+            if (Input.anyKeyDown)
+            {
+                if (Input.GetKeyDown(KeyCode.Backspace) && channelString.Length > 0)
+                {
+                    channelString = channelString.Substring(0, channelString.Length - 1);
+                    channelText.text = channelString;
+                    TextLabelManager.UpdateChannelString(channelString);
+                }
+                else
+                {
+                    for (int i = (int)KeyCode.A; i <= (int)KeyCode.Z; i++)
+                    {
+                        if (Input.GetKeyDown((KeyCode)i))
+                        {
+                            char typeChar = 'a';
+                            typeChar += (char)(i - (int)KeyCode.A);
+                            channelString += typeChar;
+                            channelText.text = channelString;
+                            TextLabelManager.UpdateChannelString(channelString);
+                        }
+                    }
+                }
+            }
+        }
+        if (inControl && !focusing && Input.GetKeyDown(KeyCode.Space))
+        {
+            ToggleChannel(!channeling);
+        }
+        if (inControl && !channeling && Input.GetKeyDown(KeyCode.Semicolon))
+        {
+            ToggleFocus(true);
+        }
+        if (focusing && Input.GetKeyUp(KeyCode.Semicolon))
+        {
+            ToggleFocus(false);
+        }
+
+        if (footstepTimer > 0)
+        {
+            footstepTimer -= Time.deltaTime;
+        }
+    }
+
+    private void LateUpdate()
+    {
+        animator.SetInteger("VertSpeed", yspd == 0 ? 0 : (int)Mathf.Sign(yspd));
+        animator.ResetTrigger("Attack");
+        animator.ResetTrigger("Land");
+        animator.ResetTrigger("Hurt");
+        animator.ResetTrigger("Faint");
+
+        if (groundSnapFlag)
+        {
+            TrySnapToGround();
+        }
+    }
+
+    new private void FixedUpdate()
+    {
+        base.FixedUpdate();
+
+        if ((channeling || focusing) && grounded)
+        {
+            xspd = 0;
+        }
+    }
+
+    private AudioClip GetFootstepSound()
+    {
+        RaycastHit hit;
+        if (Physics.BoxCast(collider.bounds.center + Vector3.up * Time.fixedDeltaTime, collider.bounds.extents, Vector3.down, out hit, Quaternion.identity, Time.fixedDeltaTime * 2, 1 << LayerMask.NameToLayer("Solid")))
+        {
+            FootstepSoundOverride fso = hit.collider.GetComponent<FootstepSoundOverride>();
+            if (fso != null)
+            {
+                return fso.GetFootstepSound();
+            }
+        }
+        return SFXManager.GetFootstepSound();
+    }
+
+    private void StartAttack()
+    {
+        SFXManager.PlaySound(audioSource, staffSwingSound, true);
+        attacking = true;
+        if (grounded)
+            xspd = 0;
+        int facing = spriteFlipper.IsFacingLeft() ? -1 : 1;
+        RaycastHit[] hits = Physics.BoxCastAll(transform.position, collider.size / 2, Vector3.right * facing, transform.rotation, attackRange);
+        if (hits.Length > 0)
+        {
+            foreach (RaycastHit hit in hits)
+            {
+                IHittable hittable = hit.collider.GetComponent<IHittable>();
+                if (hittable != null)
+                {
+                    if (hittable.OnHit(transform.position))
+                    {
+                        SFXManager.PlaySound(audioSource, staffHitSound, true);
+                    }
+                }
+            }
+        }
+    }
+
+    private void StopAttack()
+    {
+        attacking = false;
+    }
+
+    private void ToggleChannel(bool channel)
+    {
+        if (channeling && !channel)
+            TextLabelManager.SubmitChannelString(channelString);
+        channeling = channel;
+        animator.SetBool("Channeling", channel);
+        channelString = "";
+        channelText.text = "";
+        TextLabelManager.UpdateChannelString("");
+    }
+
+    private void ToggleFocus(bool focus)
+    {
+        focusing = focus;
+        animator.SetBool("Channeling", focus);
+        if (focus)
+        {
+            TextLabelManager.StartTranslation();
+        }
+        else
+        {
+            TextLabelManager.StopTranslation();
+        }
+    }
+
+    private void OnHitObject(BasicEvent ev)
+    {;
+        ObjectHitEvent objectHitEvent = ev as ObjectHitEvent;
+        Vector3 pos = transform.position + (objectHitEvent.hitObj.transform.position - transform.position) / 2;
+        ParticleManager.PlayParticleSystemAtPosition("Stars", pos);
+    }
+
+    protected override void OnLand()
+    {
+        SFXManager.PlaySound(audioSource, GetFootstepSound(), true, 1f, 0.8f);
+        animator.SetTrigger("Land");
+        hasAirJump = true;
+    }
+
+    protected override void OnCrush()
+    {
+        EntityManager.PlayerFall();
+    }
+
+    private IEnumerator DoHurtSequence()
+    {
+        float duration = invulnTime;
+        float flashDelay = 0.1f;
+        float timer = 0;
+        SpriteRenderer sprite = GetComponentInChildren<SpriteRenderer>();
+        while (timer < invulnTime)
+        {
+            timer += Time.deltaTime;
+            flashDelay -= Time.deltaTime;
+            if (flashDelay <= 0)
+            {
+                flashDelay = 0.1f;
+                sprite.enabled = !sprite.enabled;
+            }
+            yield return new WaitForEndOfFrame();
+        }
+        sprite.enabled = true;
+        invuln = false;
+        yield return null;
+    }
+}
