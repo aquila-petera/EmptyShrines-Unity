@@ -2,18 +2,18 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BouncyLeaf : PhysicsObject
+public class BouncyLeaf : MonoBehaviour
 {
     [SerializeField]
     private float bouncePower = 4;
 
     private GameObject rotationPivot;
     private bool animating;
+    private float rotY;
 
-    public override void OnCollision(GameObject other, Vector3 collisionPoint)
+    public void OnCollisionEnter(Collision col)
     {
-        base.OnCollision(other, collisionPoint);
-
+        GameObject other = col.gameObject;
         if (EntityManager.ObjectIsPlayer(other))
         {
             if (other.GetComponent<CharacterMovement>().GetSpeed().y < 0 && other.transform.position.y > transform.position.y)
@@ -31,11 +31,10 @@ public class BouncyLeaf : PhysicsObject
         }
     }
 
-    new protected void Start()
+    private void Start()
     {
-        base.Start();
-
         rotationPivot = transform.GetChild(0).gameObject;
+        rotY = rotationPivot.transform.rotation.eulerAngles.y;
     }
 
     private IEnumerator BounceAnimation(float ampStart = 1)
@@ -48,7 +47,7 @@ public class BouncyLeaf : PhysicsObject
             while (param < Mathf.PI * 2)
             {
                 param += Mathf.PI * Time.deltaTime * 4;
-                rotationPivot.transform.rotation = Quaternion.Euler(Mathf.Sin(param) * amp * 5, 0, 0);
+                rotationPivot.transform.rotation = Quaternion.Euler(Mathf.Sin(param) * amp * 5, rotY, 0);
                 yield return new WaitForEndOfFrame();
             }
             amp -= 0.5f;

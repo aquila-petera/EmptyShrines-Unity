@@ -9,7 +9,7 @@ public class Checkpoint : MonoBehaviour, IInteractable
     [SerializeField]
     private Transform spawnPoint;
     [SerializeField]
-    private TMP_Text hintText;
+    protected TMP_Text hintText;
 
     private CharacterMovement player;
     private int spawnPointIndex;

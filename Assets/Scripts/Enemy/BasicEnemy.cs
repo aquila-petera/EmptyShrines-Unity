@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BasicEnemy : PhysicsObject, IActivatable, IHittable
+public class BasicEnemy : PhysicsEntity, IActivatable, IHittable
 {
     [SerializeField]
     protected List<TextLabel> textPrompts;

@@ -6,12 +6,15 @@ public class AbilityManager : MonoBehaviour
     [Serializable]
     public enum Abilities
     {
-        ABILITY_DOUBLE_JUMP = 0
+        ABILITY_GLIDE = 0
     }
 
     private static AbilityManager instance;
 
     private bool[] abilityFlags = new bool[16];
+
+    [SerializeField]
+    private Abilities[] debugEnabledAbilities;
 
     // Start is called before the first frame update
     private void Awake()
@@ -20,6 +23,10 @@ public class AbilityManager : MonoBehaviour
             Destroy(gameObject);
         else
             instance = this;
+        foreach (Abilities ability in debugEnabledAbilities)
+        {
+            EnableAbility(ability);
+        }
     }
 
     public static void EnableAbility(Abilities ability)

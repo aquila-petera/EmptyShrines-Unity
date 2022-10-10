@@ -41,4 +41,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/ShrineSpring.unity
     guid: 13241a826d3ce0a439f8a12eda646d78
+  - enabled: 1
+    path: Assets/Scenes/Jungle1.unity
+    guid: 137ca23c29d055446922635262cc5cd4
   m_configObjects: {}

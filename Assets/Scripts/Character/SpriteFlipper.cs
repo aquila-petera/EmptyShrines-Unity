@@ -12,7 +12,6 @@ public class SpriteFlipper : MonoBehaviour
     private bool faceLeft;
 
     private bool flipping;
-    private bool spinning;
 
     void Start()
     {
@@ -45,11 +44,10 @@ public class SpriteFlipper : MonoBehaviour
         }
     }
 
-    public void Spin(bool left)
+    public void Spin(int flips = 2, float speed = 0)
     {
-        spinning = true;
         flipping = true;
-        StartCoroutine(FlipSprite(left, faceLeft ? 180 : 0));
+        StartCoroutine(SpinSprite(flips, speed));
     }
 
     public void SetFacing(bool left)
@@ -68,15 +66,29 @@ public class SpriteFlipper : MonoBehaviour
             sprite.transform.rotation = Quaternion.Euler(0, Mathf.Lerp(startRotation, targetRotation, param), 0);
             yield return new WaitForFixedUpdate();
         }
-        if (spinning)
+        flipping = false;
+    }
+
+    private IEnumerator SpinSprite(int flips = 2, float speed = 0)
+    {
+        float param = 0, rStart = faceLeft ? 180 : 0, rEnd = rStart + 180;
+        int flipsLeft = flips;
+        while (flipsLeft > 0)
         {
-            spinning = false;
-            yield return FlipSprite(left, startRotation + 180);
+            while (param < 1)
+            {
+                param += Time.fixedDeltaTime * (speed != 0 ? speed : FLIP_SPEED);
+                sprite.transform.rotation = Quaternion.Euler(0, Mathf.Lerp(rStart, rEnd, param), 0);
+                yield return new WaitForFixedUpdate();
+            }
+
+            param = 0;
+            flipsLeft--;
+            rStart = rStart == 0 ? 180 : 0;
+            rEnd = rEnd == 180 ? 360 : 180;
+
+            yield return null;
         }
-        else
-        {
-            flipping = false;
-        }
-        yield return null;
+        flipping = false;
     }
 }

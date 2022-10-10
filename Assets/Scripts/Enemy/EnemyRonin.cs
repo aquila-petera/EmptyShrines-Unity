@@ -77,15 +77,14 @@ public class EnemyRonin : BasicEnemy
         moving = false;
         dashing = false;
         dying = true;
-        spriteFlipper.Spin(false);
+        spriteFlipper.Spin();
         TimingManager.ExecuteAfterDelay(1, Die);
         return true;
     }
 
-    public override void OnCollision(GameObject other, Vector3 collisionPoint)
+    private void OnTriggerEnter(Collider col)
     {
-        base.OnCollision(other, collisionPoint);
-
+        GameObject other = col.gameObject;
         if (EntityManager.ObjectIsPlayer(other) && dashing)
         {
             other.GetComponent<CharacterMovement>().TakeDamage();

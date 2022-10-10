@@ -90,13 +90,15 @@ public class MusicManager : MonoBehaviour
         yield return FadeMusicIn(music, fadeInTime);
     }
 
-    public static void PlayCustomBGM(AudioClip music, float fadeInTime = 0, float fadeOutTime = 0)
+    public static void PlayCustomBGM(AudioClip music, float fadeInTime = 0, float fadeOutTime = 0, bool loop = true)
     {
+        instance.musicSource.loop = loop;
         instance.StartCoroutine(instance.SwitchMusicTrack(music, fadeInTime, fadeOutTime));
     }
 
     public static void PlayMapBGM(float fadeInTime = 0, float fadeOutTime = 0)
     {
+        instance.musicSource.loop = true;
         instance.StartCoroutine(instance.SwitchMusicTrack(mapBGM, fadeInTime, fadeOutTime));
     }
 

@@ -37,27 +37,13 @@ public class PhysicsEntity : MonoBehaviour
         // Check on ground
         RaycastHit hit = new RaycastHit();
         float dx = xspd, dy = yspd;
-        if (Physics.BoxCast(collider.bounds.center + Vector3.up * Time.fixedDeltaTime, collider.bounds.extents, Vector3.down, out hit, Quaternion.identity, Time.fixedDeltaTime * 2, 1 << LayerMask.NameToLayer("Solid")))
+        if (Physics.BoxCast(collider.bounds.center + Vector3.up * Time.fixedDeltaTime, collider.bounds.size / 2, Vector3.down, out hit, Quaternion.identity, Time.fixedDeltaTime * 2, 1 << LayerMask.NameToLayer("Solid")))
         {
             if (Vector3.Dot(hit.normal, Vector3.up) > slipThreshold)
             {
-                if (yspd < 0)
+                float slopeY;
+                if (grounded && dx != 0 && pushable)
                 {
-                    grounded = true;
-                    yspd = 0;
-                    OnLand();
-                }
-
-                PhysicsEntity root = hit.collider.GetComponent<PhysicsEntity>();
-                if (root != null)
-                {
-                    dx += root.xspd;
-                    dy += root.yspd;
-                }
-
-                if (dx != 0 && grounded && pushable)
-                {
-                    float slopeY;
                     if (CheckSlopeAscent(collider.bounds.center + Vector3.right * dx * Time.fixedDeltaTime, collider.bounds.extents, out slopeY))
                     {
                         transform.Translate(Vector3.up * slopeY);
@@ -70,6 +56,21 @@ public class PhysicsEntity : MonoBehaviour
                     {
                         transform.Translate(Vector3.right * Time.fixedDeltaTime * Mathf.Sign(dx));
                     }
+                }
+
+                if (yspd < 0)
+                {
+                    grounded = true;
+                    dy = 0;
+                    yspd = 0;
+                    TrySnapToGround(Time.fixedDeltaTime * 2);
+                }
+
+                PhysicsEntity root = hit.collider.GetComponent<PhysicsEntity>();
+                if (grounded && root != null)
+                {
+                    dx += root.xspd;
+                    dy += root.yspd;
                 }
             }
             else
@@ -131,9 +132,9 @@ public class PhysicsEntity : MonoBehaviour
 
     protected virtual void OnCrush() { }
 
-    public void TrySnapToGround()
+    public void TrySnapToGround(float maxDistance = 1000)
     {
-        StartCoroutine(SnapToGround());
+        StartCoroutine(SnapToGround(maxDistance));
     }
 
     public bool IsSolid(GameObject obj)
@@ -151,7 +152,7 @@ public class PhysicsEntity : MonoBehaviour
     private bool CheckSlopeAscent(Vector3 checkPos, Vector3 checkExtents, out float slopeY)
     {
         RaycastHit hit;
-        bool collision = Physics.BoxCast(checkPos + Vector3.up * slopeLimit, checkExtents, Vector3.down, out hit, transform.rotation, slopeLimit * 2);
+        bool collision = Physics.BoxCast(checkPos + Vector3.up * slopeLimit, checkExtents, Vector3.down, out hit, transform.rotation, slopeLimit * (1f - Time.fixedDeltaTime));
         if (collision && IsSolid(hit.collider.gameObject))
         {
             slopeY = hit.point.y - collider.bounds.min.y;
@@ -190,32 +191,20 @@ public class PhysicsEntity : MonoBehaviour
         return false;
     }
 
-    private IEnumerator SnapToGround()
+    private IEnumerator SnapToGround(float maxDistance)
     {
         RaycastHit hit;
         groundSnapFlag = false;
         yield return new WaitForFixedUpdate();
-        bool collision = Physics.BoxCast(collider.bounds.center, collider.bounds.extents, Vector3.down, out hit, transform.rotation, 1000);
+        bool collision = Physics.BoxCast(collider.bounds.center, collider.bounds.extents, Vector3.down, out hit, transform.rotation, maxDistance);
         if (collision)
         {
-            float cDelta = 0;
-            float surfaceY = 0;
-            if (hit.point.y > collider.bounds.center.y)
-            {
-                cDelta = -collider.bounds.extents.y;
-                surfaceY = hit.collider.bounds.min.y;
-            }
-            else
-            {
-                cDelta = collider.bounds.extents.y;
-                surfaceY = hit.collider.bounds.max.y;
-            }
+            float surfaceY = hit.point.y;
             if (IsSolid(hit.collider.gameObject))
             {
-                transform.Translate(0, (surfaceY - collider.bounds.center.y) + cDelta, 0, Space.World);
+                transform.Translate(0, surfaceY - collider.bounds.min.y, 0, Space.World);
                 yspd = 0;
                 forceGrounded = true;
-                OnLand();
             }
         }
         yield return null;

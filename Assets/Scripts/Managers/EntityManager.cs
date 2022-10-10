@@ -58,9 +58,25 @@ public class EntityManager : MonoBehaviour
         instance.player.GetComponent<CharacterMovement>().AutoChannel(duration);
     }
 
+    public static void FloatPlayerInAir(float duration)
+    {
+        instance.player.GetComponent<CharacterMovement>().FloatInAir(duration);
+    }
+
+    public static void DoPlayerGetAbilityCutscene()
+    {
+        FloatPlayerInAir(6);
+        instance.player.GetComponent<SpriteFlipper>().Spin(10, 2f);
+    }
+
     public static void SetSceneEntrance(int entranceIndex)
     {
         instance.entranceIndex = entranceIndex;
+    }
+
+    public static Transform GetPlayerTransform()
+    {
+        return instance.player.transform;
     }
 
     public static Vector3 GetPlayerPosition()

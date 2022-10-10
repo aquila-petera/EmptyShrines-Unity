@@ -5,12 +5,11 @@ using UnityEngine;
 
 public class CharacterMovement : PhysicsEntity
 {
+    [Header("General")]
     [SerializeField]
     private float moveSpeed = 1f;
     [SerializeField]
     private float jumpSpeed = 2f;
-    [SerializeField]
-    private float airJumpSpeed = 1.5f;
     [SerializeField]
     private float attackRange = 0.4f;
     [SerializeField]
@@ -20,6 +19,15 @@ public class CharacterMovement : PhysicsEntity
     [SerializeField]
     private int maxHp = 3;
 
+    [Header("Gliding")]
+    [SerializeField]
+    private float baseFallSpeed = 2;
+    [SerializeField]
+    private float glideFallSpeed = 0.5f;
+    [SerializeField]
+    private ParticleSystem glideParticles;
+
+    [Header("SFX")]
     [SerializeField]
     private AudioClip staffSwingSound;
     [SerializeField]
@@ -38,7 +46,8 @@ public class CharacterMovement : PhysicsEntity
     private AudioSource audioSource;
     private float footstepTimer;
     private float footstepInterval = 0.25f;
-    private bool hasAirJump = true;
+    private bool gliding = false;
+    private float baseGravity;
 
     public bool HasControl()
     {
@@ -70,6 +79,25 @@ public class CharacterMovement : PhysicsEntity
         animator.SetBool("Channeling", true);
         inControl = false;
         TimingManager.ExecuteAfterDelay(duration, RestoreControl);
+    }
+
+    public void FloatInAir(float duration)
+    {
+        gravity = 0;
+        yspd = 0.5f;
+        TimingManager.ExecuteAfterDelay(0.5f, StopMovement);
+        TimingManager.ExecuteAfterDelay(duration + 0.5f, LandFromAir);
+    }
+
+    private void LandFromAir()
+    {
+        yspd = -0.5f;
+        TimingManager.ExecuteAfterDelay(0.5f, ResetGravity);
+    }
+
+    private void ResetGravity()
+    {
+        gravity = baseGravity;
     }
 
     public void SetInteractable(IInteractable obj)
@@ -127,7 +155,7 @@ public class CharacterMovement : PhysicsEntity
         CameraManager.UnlockCamera();
         inControl = false;
         xspd = 0;
-        spriteFlipper.Spin(false);
+        spriteFlipper.Spin();
         TimingManager.ExecuteAfterDelay(1, EntityManager.RespawnPlayer);
     }
 
@@ -148,6 +176,7 @@ public class CharacterMovement : PhysicsEntity
         audioSource = GetComponent<AudioSource>();
         hitPoints = maxHp;
         groundSnapFlag = true;
+        baseGravity = gravity;
 
         EntityManager.RegisterPlayer(gameObject);
         EventManager.BindEvent(typeof(ObjectHitEvent), new Action<BasicEvent>(OnHitObject));
@@ -203,11 +232,13 @@ public class CharacterMovement : PhysicsEntity
                 {
                     yspd = jumpSpeed;
                 }
-                else if (hasAirJump && AbilityManager.HasAbility(AbilityManager.Abilities.ABILITY_DOUBLE_JUMP))
+            }
+            gliding = false;
+            if (Input.GetKey(KeyCode.D))
+            {
+                if (AbilityManager.HasAbility(AbilityManager.Abilities.ABILITY_GLIDE))
                 {
-                    yspd = airJumpSpeed;
-                    hasAirJump = false;
-                    ParticleManager.PlayParticleSystemAtPosition("Sakura", transform.position + Vector3.down * 0.2f, new Color(1, 0.55f, 0.95f));
+                    gliding = true;
                 }
             }
         }
@@ -272,6 +303,20 @@ public class CharacterMovement : PhysicsEntity
 
     new private void FixedUpdate()
     {
+        if (!grounded && yspd < 0 && gliding)
+        {
+            maxFallSpeed = glideFallSpeed;
+            if (!glideParticles.isPlaying)
+            {
+                glideParticles.Play();
+            }
+        }
+        else
+        {
+            maxFallSpeed = baseFallSpeed;
+            glideParticles.Stop();
+        }
+
         base.FixedUpdate();
 
         if ((channeling || focusing) && grounded)
@@ -359,7 +404,6 @@ public class CharacterMovement : PhysicsEntity
     {
         SFXManager.PlaySound(audioSource, GetFootstepSound(), true, 1f, 0.8f);
         animator.SetTrigger("Land");
-        hasAirJump = true;
     }
 
     protected override void OnCrush()

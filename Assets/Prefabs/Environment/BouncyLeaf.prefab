@@ -58,12 +58,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67081a480c412f7458b610e948b546fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gravity: 0
-  maxYSpd: 0
-  slopeLimit: 0.025
-  ignoreLayer: 
-  solidLayer: 
-  pushable: 0
   bouncePower: 3
 --- !u!1 &1632655076122986604
 GameObject:
@@ -168,7 +162,8 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 8036977162770779988, guid: 2ea2517b1b8501d4ab655ec9992b2d26, type: 3}
   m_SourcePrefab: {fileID: 100100000, guid: 2ea2517b1b8501d4ab655ec9992b2d26, type: 3}
 --- !u!4 &205545911171709859 stripped
 Transform:

@@ -95,6 +95,7 @@ GameObject:
   - component: {fileID: 2572210426962531861}
   - component: {fileID: 2572210426962531851}
   - component: {fileID: 2572210426962531859}
+  - component: {fileID: 7380642275272627307}
   m_Layer: 11
   m_Name: EnemyRonin
   m_TagString: Untagged
@@ -178,10 +179,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gravity: 6
-  maxYSpd: 3
+  maxFallSpeed: 2
   slopeLimit: 0.025
-  ignoreLayer: 
-  solidLayer: Solid
+  slipThreshold: 0.5
   pushable: 0
   textPrompts: []
   autoActive: 0
@@ -190,6 +190,22 @@ MonoBehaviour:
   walkSpd: 1
   dashSpd: 3.5
   hat: {fileID: 4034809709160204216}
+--- !u!54 &7380642275272627307
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2572210426962531856}
+  serializedVersion: 2
+  m_Mass: 10
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_UseGravity: 0
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 120
+  m_CollisionDetection: 3
 --- !u!1 &4034809709160204216
 GameObject:
   m_ObjectHideFlags: 0
@@ -202,6 +218,7 @@ GameObject:
   - component: {fileID: 4034809709160204218}
   - component: {fileID: 7504426121193312977}
   - component: {fileID: 4034809709160204220}
+  - component: {fileID: 6194802017663563630}
   m_Layer: 11
   m_Name: Hat
   m_TagString: Untagged
@@ -250,10 +267,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gravity: 0
-  maxYSpd: 0
+  maxFallSpeed: 2
   slopeLimit: 0
-  ignoreLayer: 
-  solidLayer: 
+  slipThreshold: 0.5
   pushable: 0
   textPrompts:
   - {fileID: 7930373701169991161}
@@ -272,6 +288,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sprite: {fileID: 4034809710738586690}
   faceLeft: 0
+--- !u!54 &6194802017663563630
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4034809709160204216}
+  serializedVersion: 2
+  m_Mass: 10
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 120
+  m_CollisionDetection: 3
 --- !u!1 &4034809710170065976
 GameObject:
   m_ObjectHideFlags: 0

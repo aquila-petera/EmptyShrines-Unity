@@ -34,13 +34,22 @@ public class ProjectileFactory : MonoBehaviour
         return proj;
     }
 
-    public BasicProjectile SpawnProjectile(Sprite sprite, Vector3 position, Vector2 velocity)
+    public BasicProjectile SpawnBasicProjectile(Sprite sprite, Vector3 position, Vector2 velocity)
     {
         GameObject go = Instantiate(projectileTemplate);
         BasicProjectile proj = go.GetComponent<BasicProjectile>();
         go.transform.position = position;
         proj.SetVelocity(velocity.x, velocity.y);
         go.GetComponentInChildren<SpriteRenderer>().sprite = sprite;
+        return proj;
+    }
+
+    public BasicProjectile SpawnCustomProjectile(GameObject prefab, Vector3 position, Vector2 velocity)
+    {
+        GameObject go = Instantiate(prefab);
+        BasicProjectile proj = go.GetComponent<BasicProjectile>();
+        go.transform.position = position;
+        proj.SetVelocity(velocity.x, velocity.y);
         return proj;
     }
 }

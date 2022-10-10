@@ -22,6 +22,8 @@ public class TextLabel : MonoBehaviour
     private bool startDisabled;
     [SerializeField]
     private TMP_Text translation;
+    [SerializeField]
+    private AudioClip chimeSound;
 
     private TMP_Text highlight;
 
@@ -36,7 +38,7 @@ public class TextLabel : MonoBehaviour
     private float targetAlpha = 1;
     private Color baseOutlineColor;
     private ParticleSystem particles;
-    private float translationTime = 2.5f;
+    private float translationTime = 1f;
 
     public void UpdateHighlight(string typeStr)
     {
@@ -57,6 +59,7 @@ public class TextLabel : MonoBehaviour
 
     private void ForceActivate()
     {
+        AudioSource.PlayClipAtPoint(chimeSound, transform.position);
         if (duration > 0)
         {
             StartCoroutine(DoActiveTimer());
