@@ -34,6 +34,28 @@ public class PlayerHealthChangeEvent : BasicEvent
     }
 }
 
+public class PlayerKiChangeEvent : BasicEvent
+{
+    public int newKi;
+    public int newMaxKi;
+
+    public PlayerKiChangeEvent(int ki, int maxKi)
+    {
+        newKi = ki;
+        newMaxKi = maxKi;
+    }
+}
+
+public class PlayerFinishedMeditatingEvent : BasicEvent
+{
+    public bool success;
+    
+    public PlayerFinishedMeditatingEvent(bool wasSuccessful)
+    {
+        success = wasSuccessful;
+    }
+}
+
 public class PlayerSpawnedEvent : BasicEvent
 {
     public PlayerSpawnedEvent() { }

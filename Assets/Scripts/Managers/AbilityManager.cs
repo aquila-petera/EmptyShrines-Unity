@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class AbilityManager : MonoBehaviour
@@ -20,9 +21,14 @@ public class AbilityManager : MonoBehaviour
     private void Awake()
     {
         if (instance != null)
+        {
             Destroy(gameObject);
+            return;
+        }
         else
+        {
             instance = this;
+        }
         foreach (Abilities ability in debugEnabledAbilities)
         {
             EnableAbility(ability);
@@ -37,5 +43,18 @@ public class AbilityManager : MonoBehaviour
     public static bool HasAbility(Abilities ability)
     {
         return instance.abilityFlags[(int)ability];
+    }
+
+    public static List<Abilities> GetEnabledAbilities()
+    {
+        List<Abilities> abilities = new List<Abilities>();
+        for (int i = 0; i < instance.abilityFlags.Length; i++)
+        {
+            if (instance.abilityFlags[i])
+            {
+                abilities.Add((Abilities)i);
+            }
+        }
+        return abilities;
     }
 }

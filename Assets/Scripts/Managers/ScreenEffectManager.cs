@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
 
 public class ScreenEffectManager : MonoBehaviour
 {
@@ -21,6 +22,8 @@ public class ScreenEffectManager : MonoBehaviour
     private Image overlay;
     [SerializeField]
     private CanvasGroup tutorialText;
+    [SerializeField]
+    private CanvasGroup journal;
 
     private bool showingTutorial;
 
@@ -39,11 +42,65 @@ public class ScreenEffectManager : MonoBehaviour
         {
             HideTutorial();
         }
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            if (!IsJournalOpen())
+            {
+                ShowJournal();
+            }
+        }
     }
 
     private void Start()
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    public static bool IsJournalOpen()
+    {
+        return instance.journal.gameObject.activeSelf;
+    }
+
+    public static void ShowJournal()
+    {
+        instance.StartCoroutine(instance.FadeJournalIn());
+        EntityManager.SetPlayerControlEnabled(false);
+    }
+
+    private IEnumerator FadeJournalIn()
+    {
+        journal.gameObject.SetActive(true);
+        float param = 0;
+        while (param < 1)
+        {
+            param += Time.deltaTime * 2;
+            instance.journal.alpha = param;
+            yield return new WaitForEndOfFrame();
+        }
+        journal.GetComponentInChildren<TMP_InputField>().ActivateInputField();
+    }
+
+    public static void HideJournal()
+    {
+        instance.HideJournal(instance.journal.GetComponentInChildren<TMP_InputField>().text);
+    }
+
+    public void HideJournal(string journalText)
+    {
+        instance.StartCoroutine(instance.FadeJournalOut());
+        EntityManager.SetPlayerControlEnabled(true);
+    }
+
+    private IEnumerator FadeJournalOut()
+    {
+        float param = 1;
+        while (param > 0)
+        {
+            param -= Time.deltaTime * 2;
+            instance.journal.alpha = param;
+            yield return new WaitForEndOfFrame();
+        }
+        journal.gameObject.SetActive(false);
     }
 
     public static void ShowTutorial()

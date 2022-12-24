@@ -12,7 +12,7 @@ public class TextLabelManager : MonoBehaviour
     public Action<string> OnSubmit;
 
     [Serializable]
-    struct Glyph
+    public struct Glyph
     {
         public string glyphChars;
         public string engChars;
@@ -103,6 +103,11 @@ public class TextLabelManager : MonoBehaviour
             }
         }
         return ret;
+    }
+
+    public static List<Glyph> GetAllGlyphs()
+    {
+        return instance.glyphs;
     }
 
     private void Awake()

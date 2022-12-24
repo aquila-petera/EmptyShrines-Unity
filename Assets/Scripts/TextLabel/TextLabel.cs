@@ -38,7 +38,7 @@ public class TextLabel : MonoBehaviour
     private float targetAlpha = 1;
     private Color baseOutlineColor;
     private ParticleSystem particles;
-    private float translationTime = 1f;
+    private float translationTime = 4f;
 
     public void UpdateHighlight(string typeStr)
     {

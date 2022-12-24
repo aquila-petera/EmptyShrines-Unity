@@ -14,6 +14,8 @@ public class EnemyFlower : BasicEnemy
     private GameObject projectilePrefab;
     [SerializeField]
     private float shotSpeed = 2;
+    [SerializeField]
+    private float startTimerOffset = 0;
 
     private float idleTimer = 0;
     private float prepTimer = 0;
@@ -32,7 +34,7 @@ public class EnemyFlower : BasicEnemy
     {
         base.Start();
 
-        idleTimer = idleTime;
+        idleTimer = idleTime - startTimerOffset;
         animator = GetComponent<Animator>();
     }
 

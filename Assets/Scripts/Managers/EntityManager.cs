@@ -102,6 +102,21 @@ public class EntityManager : MonoBehaviour
         return instance.player.GetComponent<CharacterMovement>().GetHitPoints();
     }
 
+    public static int GetPlayerMaxKi()
+    {
+        return instance.player.GetComponent<CharacterMovement>().GetMaxKiPoints();
+    }
+
+    public static int GetPlayerKi()
+    {
+        return instance.player.GetComponent<CharacterMovement>().GetKiPoints();
+    }
+
+    public static void ChangePlayerKi(int amt)
+    {
+        instance.player.GetComponent<CharacterMovement>().ChangeKiPoints(amt);
+    }
+
     public static bool ObjectIsPlayer(GameObject obj)
     {
         return obj.Equals(instance.player);
@@ -116,6 +131,16 @@ public class EntityManager : MonoBehaviour
     {
         instance.respawnEntrance = entranceInd;
         instance.respawnScene = sceneName;
+    }
+
+    public static string GetRespawnScene()
+    {
+        return instance.respawnScene;
+    }
+
+    public static int GetRespawnEntrance()
+    {
+        return instance.respawnEntrance;
     }
 
     public static void RespawnPlayer()
@@ -136,6 +161,12 @@ public class EntityManager : MonoBehaviour
         instance.player.GetComponent<SpriteFlipper>().SetFacing(rot != 0);
         playerMovement.StopMovement();
         playerMovement.TrySnapToGround();
+        playerMovement.TakeDamage();
+    }
+
+    public static void HurtPlayer()
+    {
+        CharacterMovement playerMovement = instance.player.GetComponent<CharacterMovement>();
         playerMovement.TakeDamage();
     }
 

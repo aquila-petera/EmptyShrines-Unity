@@ -18,6 +18,10 @@ public class CharacterMovement : PhysicsEntity
     private TMP_Text channelText;
     [SerializeField]
     private int maxHp = 3;
+    [SerializeField]
+    private int maxKi = 10;
+    [SerializeField]
+    private MeditationController meditation;
 
     [Header("Gliding")]
     [SerializeField]
@@ -38,11 +42,13 @@ public class CharacterMovement : PhysicsEntity
     private bool attacking = false;
     private bool channeling = false;
     private bool focusing = false;
+    private bool meditating = false;
     private bool invuln = false;
     private string channelString = "";
     private SpriteFlipper spriteFlipper;
     private IInteractable interactable;
     private int hitPoints;
+    private int kiPoints;
     private AudioSource audioSource;
     private float footstepTimer;
     private float footstepInterval = 0.25f;
@@ -56,14 +62,14 @@ public class CharacterMovement : PhysicsEntity
 
     public void SetControlEnabled(bool enabled)
     {
+        xspd = enabled ? xspd : 0;
         inControl = enabled;
     }
 
     public void AutoMove(bool left, float duration = 0)
     {
         inControl = false;
-        ToggleChannel(false);
-        ToggleFocus(false);
+        ResetState();
         xspd = left ? -moveSpeed : moveSpeed;
         animator.SetInteger("MoveSpeed", (int)xspd);
         if (duration > 0)
@@ -74,8 +80,7 @@ public class CharacterMovement : PhysicsEntity
     {
         xspd = 0;
         inControl = false;
-        ToggleChannel(false);
-        ToggleFocus(false);
+        ResetState();
         animator.SetBool("Channeling", true);
         inControl = false;
         TimingManager.ExecuteAfterDelay(duration, RestoreControl);
@@ -111,8 +116,7 @@ public class CharacterMovement : PhysicsEntity
         {
             invuln = true;
             attacking = false;
-            ToggleChannel(false);
-            ToggleFocus(false);
+            ResetState();
             hitPoints--;
             EventManager.InvokeEvent(new PlayerHealthChangeEvent(1));
             if (hitPoints <= 0)
@@ -149,6 +153,29 @@ public class CharacterMovement : PhysicsEntity
         return maxHp;
     }
 
+    public void SetKiPoints(int ki)
+    {
+        kiPoints = ki;
+    }
+
+    public bool ChangeKiPoints(int delta)
+    {
+        bool afford = kiPoints + delta >= 0;
+        kiPoints = Mathf.Clamp(kiPoints + delta, 0, maxKi);
+        EventManager.InvokeEvent(new PlayerKiChangeEvent(kiPoints, maxKi));
+        return afford;
+    }
+
+    public int GetKiPoints()
+    {
+        return kiPoints;
+    }
+
+    public int GetMaxKiPoints()
+    {
+        return maxKi;
+    }
+
     private void Faint()
     {
         animator.SetTrigger("Faint");
@@ -162,8 +189,7 @@ public class CharacterMovement : PhysicsEntity
     private void RestoreControl()
     {
         inControl = true;
-        ToggleChannel(false);
-        ToggleFocus(false);
+        ResetState();
         xspd = 0;
         animator.SetInteger("MoveSpeed", 0);
     }
@@ -180,16 +206,19 @@ public class CharacterMovement : PhysicsEntity
 
         EntityManager.RegisterPlayer(gameObject);
         EventManager.BindEvent(typeof(ObjectHitEvent), new Action<BasicEvent>(OnHitObject));
+        EventManager.BindEvent(typeof(PlayerFinishedMeditatingEvent), new Action<BasicEvent>(OnMeditationEnd));
     }
 
     private void OnDestroy()
     {
         EventManager.UnbindEvent(typeof(ObjectHitEvent), OnHitObject);
+        EventManager.UnbindEvent(typeof(PlayerFinishedMeditatingEvent), new Action<BasicEvent>(OnMeditationEnd));
     }
 
     private void Update()
     {
-        if (inControl && !channeling && !focusing && !attacking)
+        gliding = false;
+        if (inControl && IsIdleState() && !attacking)
         {
             if (Input.GetKey(KeyCode.S))
             {
@@ -233,7 +262,6 @@ public class CharacterMovement : PhysicsEntity
                     yspd = jumpSpeed;
                 }
             }
-            gliding = false;
             if (Input.GetKey(KeyCode.D))
             {
                 if (AbilityManager.HasAbility(AbilityManager.Abilities.ABILITY_GLIDE))
@@ -268,11 +296,23 @@ public class CharacterMovement : PhysicsEntity
                 }
             }
         }
-        if (inControl && !focusing && Input.GetKeyDown(KeyCode.Space))
+        else if (meditating)
+        {
+            if (Input.GetKeyDown(KeyCode.S))
+            {
+                meditation.Choose(true);
+            }
+            else if (Input.GetKeyDown(KeyCode.F))
+            {
+                meditation.Choose(false);
+            }
+        }
+
+        if (inControl && (IsIdleState() || channeling) && Input.GetKeyDown(KeyCode.Space))
         {
             ToggleChannel(!channeling);
         }
-        if (inControl && !channeling && Input.GetKeyDown(KeyCode.Semicolon))
+        if (inControl && IsIdleState() && Input.GetKeyDown(KeyCode.Semicolon))
         {
             ToggleFocus(true);
         }
@@ -285,6 +325,18 @@ public class CharacterMovement : PhysicsEntity
         {
             footstepTimer -= Time.deltaTime;
         }
+    }
+
+    private void ResetState()
+    {
+        ToggleChannel(false);
+        ToggleFocus(false);
+        ToggleMeditate(false);
+    }
+
+    private bool IsIdleState()
+    {
+        return !channeling && !focusing && !meditating;
     }
 
     private void LateUpdate()
@@ -382,7 +434,7 @@ public class CharacterMovement : PhysicsEntity
     private void ToggleFocus(bool focus)
     {
         focusing = focus;
-        animator.SetBool("Channeling", focus);
+        animator.SetBool("Focusing", focus);
         if (focus)
         {
             TextLabelManager.StartTranslation();
@@ -393,11 +445,33 @@ public class CharacterMovement : PhysicsEntity
         }
     }
 
+    public void ToggleMeditate(bool meditate)
+    {
+        meditating = meditate;
+        // Intentionally using the same focusing animator state
+        animator.SetBool("Focusing", meditate);
+        if (meditating)
+        {
+            meditation.GenerateNewPrompt();
+            meditation.gameObject.SetActive(true);
+        }
+        else
+        {
+            meditation.gameObject.SetActive(false);
+        }
+    }
+
     private void OnHitObject(BasicEvent ev)
     {;
         ObjectHitEvent objectHitEvent = ev as ObjectHitEvent;
         Vector3 pos = transform.position + (objectHitEvent.hitObj.transform.position - transform.position) / 2;
         ParticleManager.PlayParticleSystemAtPosition("Stars", pos);
+    }
+
+    private void OnMeditationEnd(BasicEvent ev)
+    {
+        PlayerFinishedMeditatingEvent pfmEv = ev as PlayerFinishedMeditatingEvent;
+        ToggleMeditate(false);
     }
 
     protected override void OnLand()
